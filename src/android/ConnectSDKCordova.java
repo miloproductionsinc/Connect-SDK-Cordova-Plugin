@@ -239,6 +239,7 @@ public class ConnectSDKCordova extends CordovaPlugin {
 
                         @Override
                         public void onPickDeviceFailed(boolean canceled) {
+                            callbackContext.error(canceled ? "" : "Error picking device");
                         }
                     });
                     picker.showPicker();
