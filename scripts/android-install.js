@@ -15,11 +15,8 @@ var commands = {
 };
 
 var paths = {
-	"ConnectSDK_Repository": "https://github.com/ConnectSDK/Connect-SDK-Android.git",
-	"ConnectSDK_Tag": "1.6.2",
-	"FlingSDK_URL": "https://s3-us-west-1.amazonaws.com/amazon-fling/AmazonFling-SDK.zip",
-	"AmazonFling_Jar": "./csdk_tmp/android-sdk/lib/AmazonFling.jar",
-	"WhisperPlay_Jar": "./csdk_tmp/android-sdk/lib/android/WhisperPlay.jar"
+	"ConnectSDK_Repository": "https://github.com/miloproductionsinc/Connect-SDK-Android.git",
+	"ConnectSDK_Branch": "master_personal"
 };
 
 function safePath(unsafePath) {
@@ -31,7 +28,6 @@ function AndroidInstall() {}
 AndroidInstall.prototype.steps = [
 	"createTemporaryDirectory",
 	"cloneConnectSDK",
-	"downloadFlingSDK",
 	"cleanup"
 ];
 
@@ -108,7 +104,7 @@ AndroidInstall.prototype.revert_createTemporaryDirectory = function () {
 };
 
 AndroidInstall.prototype.cloneConnectSDK = function () {
-	console.log("Cloning Connect-SDK-Android repository (" + paths.ConnectSDK_Tag + ")");
+	console.log("Cloning Connect-SDK-Android repository (" + paths.ConnectSDK_Branch + ")");
 	return Q.nfcall(fs.readdir, safePath('./cordova-plugin-connectsdk'))
 	.then(function (files) {
 		for (var i = 0; i < files.length; i++) {
@@ -119,10 +115,7 @@ AndroidInstall.prototype.cloneConnectSDK = function () {
 		}
 	})
 	.then(function () {
-		return Q.nfcall(exec, "git clone --depth 1 " + paths.ConnectSDK_Repository + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory));
-	})
-	.then(function () {
-		return Q.nfcall(exec, "git checkout " + paths.ConnectSDK_Tag, {cwd: safePath("./cordova-plugin-connectsdk/" + csdkDirectory)});
+		return Q.nfcall(exec, "git clone --depth 1 --branch " + paths.ConnectSDK_Branch + " " + paths.ConnectSDK_Repository + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory));
 	})
 	.then(function () {
 		return Q.nfcall(exec, "git submodule update --init", {cwd: safePath("./cordova-plugin-connectsdk/" + csdkDirectory)});
@@ -141,42 +134,6 @@ AndroidInstall.prototype.revert_cloneConnectSDK = function () {
 	.then (function () {
 		return Q.nfcall(exec, commands.mv + " " + safePath("./csdk_tmp/" + csdkDirectory) + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory));
 	})
-};
-
-AndroidInstall.prototype.downloadFlingSDK = function () {
-	var deferred = Q.defer();
-	console.log("Downloading Fling SDK");
-	var file = fs.createWriteStream(safePath("./csdk_tmp/AmazonFling-SDK.zip"));
-	https.get(paths.FlingSDK_URL, function(response) {
-		response.pipe(file).on('close', function () {
-			console.log('Extracting Fling SDK');
-			var uz = fs.createReadStream(safePath('./csdk_tmp/AmazonFling-SDK.zip')).pipe(unzip.Extract({path: safePath('./csdk_tmp')}));
-			uz.on('error', function (err) {
-				deferred.reject(err);
-			});
-			uz.on('close', function () {
-				if (deferred.promise.inspect().state !== "rejected") {
-					console.log("Moving AmazonFling.jar");
-					Q.nfcall(exec, commands.mv + " " + safePath(paths.AmazonFling_Jar) + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory + "/modules/firetv/libs/AmazonFling.jar"))
-					.then(function () {
-						console.log("Moving WhisperPlay.jar");
-						return Q.nfcall(exec, commands.mv + " " + safePath(paths.WhisperPlay_Jar) + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory + "/modules/firetv/libs/WhisperPlay.jar"));
-					})
-					.then(function () {
-						deferred.resolve();
-					})
-					.catch(function (err) {
-						deferred.reject(err);
-					});
-				}
-			});
-		});
-	});
-	return deferred.promise;
-};
-
-AndroidInstall.prototype.revert_downloadFlingSDK = function () {
-	return Q.resolve();
 };
 
 AndroidInstall.prototype.cleanup = function () {
