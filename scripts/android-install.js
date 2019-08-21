@@ -1,23 +1,7 @@
-var exec = require('child_process').exec,
+var 
+	exec = require('child_process').exec,
 	path = require('path'),
-	fs = require('fs'),
-	http = require('http'),
-	https = require('https'),
-	unzip = require('unzip'),
-	isWin = /^win/.test(process.platform),
-	Q = require('q'),
-	csdkDirectory;
-
-var commands = {
-	rmRF: isWin ? "rmdir /S /Q" : "rm -rf",
-	cp: isWin ? "copy" : "cp",
-	mv: isWin ? "move" : "mv"
-};
-
-var paths = {
-	"ConnectSDK_Repository": "https://github.com/miloproductionsinc/Connect-SDK-Android.git",
-	"ConnectSDK_Branch": "master_personal"
-};
+	Q = require('q');
 
 function safePath(unsafePath) {
 	return path.join(process.cwd(), "./platforms/android/", unsafePath);
@@ -26,43 +10,12 @@ function safePath(unsafePath) {
 function AndroidInstall() {}
 
 AndroidInstall.prototype.steps = [
-	"createTemporaryDirectory",
-	"cloneConnectSDK",
-	"cleanup"
+	"cloneConnectSDK"
 ];
 
 AndroidInstall.prototype.start = function () {
 	console.log("Starting ConnectSDK Android install");
-	var self = this;
-
-	var deferred = Q.defer();
-
-	// Check for updated install steps
-	console.log("Checking for updated configuration");
-	http.get("http://ec2-54-201-108-205.us-west-2.compute.amazonaws.com/CordovaPlugin/1.6.0/Android/paths.json", function(res) {
-		var body = '';
-
-		res.on('data', function(chunk){
-			body += chunk;
-		});
-
-		res.on('end', function() {
-			try {
-				var tmp_paths = JSON.parse(body);
-				paths = tmp_paths;
-			} catch(err) {
-				console.log("Error parsing updates, using default configuration (install might fail)");
-			}
-			deferred.resolve();
-		});
-	}).on('error', function(e) {
-		console.log("Error checking for updates, using default configuration (install might fail)");
-		deferred.resolve();
-	});
-
-	deferred.promise.then(function () {
-		self.executeStep(0);
-	});
+	this.executeStep(0);
 };
 
 AndroidInstall.prototype.executeStep = function (step) {
@@ -95,54 +48,12 @@ AndroidInstall.prototype.revertStep = function (step) {
 	}
 };
 
-AndroidInstall.prototype.createTemporaryDirectory = function () {
-	return Q.nfcall(fs.mkdir, safePath('./csdk_tmp'));
-};
-
-AndroidInstall.prototype.revert_createTemporaryDirectory = function () {
-	return Q.nfcall(exec, commands.rmRF + " " + safePath("./csdk_tmp"));
-};
-
 AndroidInstall.prototype.cloneConnectSDK = function () {
-	console.log("Cloning Connect-SDK-Android repository (" + paths.ConnectSDK_Branch + ")");
-	return Q.nfcall(fs.readdir, safePath('./cordova-plugin-connectsdk'))
-	.then(function (files) {
-		for (var i = 0; i < files.length; i++) {
-			if (files[i].indexOf('Connect-SDK-Android') !== -1) {
-				csdkDirectory = files[i];
-				return Q.nfcall(exec, commands.mv + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory) + " " + safePath("./csdk_tmp/" + csdkDirectory));
-			}
-		}
-	})
-	.then(function () {
-		return Q.nfcall(exec, "git clone --depth 1 --branch " + paths.ConnectSDK_Branch + " " + paths.ConnectSDK_Repository + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory));
-	})
-	.then(function () {
-		return Q.nfcall(exec, "git submodule update --init", {cwd: safePath("./cordova-plugin-connectsdk/" + csdkDirectory)});
-	})
-	.then(function () {
-		return Q.nfcall(exec, commands.cp + " " + safePath("../../plugins/cordova-plugin-connectsdk/Connect-SDK-Android/build.gradle") + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory + "/build-extras.gradle"));
-	})
-	.then(function () {
-		return Q.nfcall(exec, commands.cp + " " + safePath("./csdk_tmp/" + csdkDirectory + "/build.gradle") + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory + "/build.gradle"));
-	});
+	console.log("Retrieving Connect-SDK-Android repository");
+	return Q.nfcall(exec, "git submodule update --recursive", {cwd: safePath("../../plugins/cordova-plugin-connectsdk")});
 };
 
 AndroidInstall.prototype.revert_cloneConnectSDK = function () {
-	console.log("Reverting Connect-SDK-Android repository clone");
-	return Q.nfcall(exec, commands.rmRF + " " + safePath('./cordova-plugin-connectsdk/' + csdkDirectory))
-	.then (function () {
-		return Q.nfcall(exec, commands.mv + " " + safePath("./csdk_tmp/" + csdkDirectory) + " " + safePath("./cordova-plugin-connectsdk/" + csdkDirectory));
-	})
-};
-
-AndroidInstall.prototype.cleanup = function () {
-	console.log("Cleaning up");
-	return this.revert_createTemporaryDirectory();
-};
-
-AndroidInstall.prototype.revert_cleanup = function () {
-	return Q.resolve();
 };
 
 new AndroidInstall().start();
