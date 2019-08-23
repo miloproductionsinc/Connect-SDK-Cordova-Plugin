@@ -1,4 +1,0 @@
-[submodule "Connect-SDK-Android"]
-	path = Connect-SDK-Android
-	url = https://github.com/miloproductionsinc/Connect-SDK-Android.git
-	branch = master_personal
