@@ -87,11 +87,6 @@
         <source-file src="src/android/MediaControlWrapper.java" target-dir="src/com/connectsdk/cordova" />
         <source-file src="src/android/PlaylistControlWrapper.java" target-dir="src/com/connectsdk/cordova" />
 
-        <hook type="after_plugin_install" src="scripts/android-install.js" />
-        <hook type="before_plugin_uninstall" src="scripts/android-uninstall.js" />
-
-        <framework src="Connect-SDK-Android" custom="true" type="projectReference" weak="true" />
-
     </platform>
 
 </plugin>
