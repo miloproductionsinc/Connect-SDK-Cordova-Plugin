@@ -18,37 +18,38 @@ These steps assume you have a basic working knowledge of development for Android
 
 If you are only developing for one platform, feel free to ignore the steps & requirements for the irrelevant platform.
 
-## Installation for Cordova/PhoneGap 5.x
+## Installation for Cordova/PhoneGap
 
-#### 1. Create a new Cordova app (optional)
-
-    cordova create sample_app com.example.sample_app SampleApp
-    cd sample_app
-    cordova platform add ios
-    cordova platform add android
-
-#### 2. Add plugin to app
-
+```
     cordova plugin add cordova-plugin-connectsdk
-
+```
 Or for a specific version, such as 1.6.0
-
+```
     cordova plugin add cordova-plugin-connectsdk@1.6.0
-    
+``` 
 You can also install a specific branch from Github (e.g. to install versions older than 1.6.0), such as sdk_1.3
-
+```
     cordova plugin add https://github.com/ConnectSDK/Connect-SDK-Cordova-Plugin.git#sdk_1.3
     
-Thats it! Dependencies will be downloaded and set up automatically.
+```
 
-**Dependencies will not be downloaded automatically for versions older than 1.6.0. You'll need to check the README from that branch and follow any manual set up steps.**
+###Permissions to include in manifest
+* Required for SSDP & Chromecast/Zeroconf discovery
+ - `android.permission.INTERNET`
+ - `android.permission.CHANGE_WIFI_MULTICAST_STATE`
+* Required for interacting with devices
+ - `android.permission.ACCESS_NETWORK_STATE`
+ - `android.permission.ACCESS_WIFI_STATE`
+* Required for storing device pairing information
+ - `android.permission.WRITE_EXTERNAL_STORAGE`
 
-## Contact
-* Twitter [@ConnectSDK](https://www.twitter.com/ConnectSDK)
-* Ask a question with the "tv" tag on [Stack Overflow](http://stackoverflow.com/tags/tv)
-* General Inquiries info@connectsdk.com
-* Developer Support support@connectsdk.com
-* Partnerships partners@connectsdk.com
+```xml
+<uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+```
 
 ## Troubleshooting
 
@@ -65,6 +66,73 @@ Thats it! Dependencies will be downloaded and set up automatically.
     cordova plugin remove com.connectsdk.cordovaplugin
     cordova plugin add cordova-plugin-connectsdk
 ```
+
+###Proguard configuration
+Add the following line to your proguard configuration file (otherwise `DiscoveryManager` won't be able to set any `DiscoveryProvider`).
+
+```
+-keep class com.connectsdk.**       { * ; }
+```
+###Metadata for application tag
+This metadata tag is necessary to enable Chromecast support.
+
+```xml
+<application ... >
+    ...
+
+    <meta-data
+        android:name="com.google.android.gms.version"
+        android:value="@integer/google_play_services_version" />
+
+</application>
+```
+
+##Limitations/Caveats
+
+###Subtitles Android
+
+- DLNA service support `SRT` format only. Since there is no official specification for them, subtitles may not work on all DLNA-compatible devices. This feature has been tested and works on LG WebOS and Netcast TVs.
+- FireTV service supports `WebVTT` format only. Subtitles on Fire TV are hidden by default. To display them, the user should manually pick one in the media player (click the "Options" button on the remote). The Fling SDK doesn't provide any way to make them appear remotely.
+- Google Cast service supports `WebVTT` format only. Servers providing subtitles and media files should support CORS headers, otherwise they are not displayed. The simplest change is to send this HTTP response header for your subtitles: `Access-Control-Allow-Origin: *`. More information is here: [https://developers.google.com/cast/docs/android_sender#cors-requirements](https://developers.google.com/cast/docs/android_sender#cors-requirements).
+- Netcast service support `SRT` format only. It uses DLNA and has the same restrictions as DLNA service.
+- WebOS service supports `WebVTT` format only. The server providing subtitles should support CORS headers, similarly to Cast service's requirements.
+
+###Tests
+Connect SDK has unit tests for some parts of the code, and we are continuing to increase the test coverage.
+These tests are based on third party libraries such as Robolectric, Mockito and PowerMock. You can easily run these tests with Gradle:
+```
+gradle test
+```
+Also the project has a target for generating test coverage report with Jacoco. Use this command for generating it.
+```
+gradle jacocoTestReport
+```
+The test coverage report will be in this folder `Connect-SDK-Android/build/reports/jacoco/jacocoTestReport/html`.
+
+##Credits
+Connect SDK for Android makes use of the following projects, some of which are open-source.
+
+* [Amazon Fling SDK](https://developer.amazon.com/fling)
+  - [Amazon Fling SDK Terms of Service](https://developer.amazon.com/public/support/pml.html)
+* [Android-DLNA](https://code.google.com/p/android-dlna/) (Apache License, Version 2.0)
+* [Google Cast SDK](https://developers.google.com/cast/)
+  - [Google Cast SDK Additional Developer Terms of Service](https://developers.google.com/cast/docs/terms)
+  - [Google APIs Terms of Service](https://developers.google.com/terms/)
+* [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket) (MIT)
+* [JmDNS](http://jmdns.sourceforge.net) (Apache License, Version 2.0)
+
+These projects are used in tests:
+* [Mockito](http://mockito.org/) (MIT)
+* [Robolectric](http://robolectric.org) (MIT)
+* [PowerMock](https://github.com/jayway/powermock) (Apache License, Version 2.0)
+* [XMLUnit](http://www.xmlunit.org/) (Apache License, Version 2.0)
+
+## Contact
+* Twitter [@ConnectSDK](https://www.twitter.com/ConnectSDK)
+* Ask a question with the "tv" tag on [Stack Overflow](http://stackoverflow.com/tags/tv)
+* General Inquiries info@connectsdk.com
+* Developer Support support@connectsdk.com
+* Partnerships partners@connectsdk.com
 
 ## License
 
